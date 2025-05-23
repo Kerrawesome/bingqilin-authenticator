@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Authenticator</title>
+    <link rel="icon" href="https://em-content.zobj.net/source/google/387/soft-ice-cream_1f366.png" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Material Design Inspired Variables */
+        :root {
+            --md-primary-color: #e68a00; /* Orange */
+            --md-primary-dark-color: #cc6f00;
+            --md-secondary-color: #4CAF50; /* Green for progress/success */
+            --md-background-color: #f5f5f5;
+            --md-surface-color: #ffffff;
+            --md-on-primary-color: #ffffff;
+            --md-on-surface-primary: rgba(0, 0, 0, 0.87);
+            --md-on-surface-secondary: rgba(0, 0, 0, 0.6);
+            --md-border-radius: 4px;
+            --md-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+            --md-elevation-2: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+            --spacing-unit: 8px;
+            --progress-bar-height: 6px; /* Height of the progress bar */
+        }
+
+        * { box-sizing: border-box; }
+        *::-webkit-scrollbar { display: none; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--md-background-color);
+            color: var(--md-on-surface-primary);
+            padding-bottom: calc(var(--spacing-unit) * 4); /* More bottom padding */
+        }
+
+        /* Header */
+        .app-header {
+            background-color: var(--md-surface-color);
+            padding: var(--spacing-unit) calc(var(--spacing-unit) * 2);
+            box-shadow: var(--md-elevation-2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .title-container { display: flex; align-items: center; gap: calc(var(--spacing-unit) * 2); text-align: left; }
+        .title-image { width: 40px; height: 40px; object-fit: contain; }
+        .title-text h1, .title-text h2 { margin: 0; line-height: 1.2; }
+        .title-text h1 { font-size: 1.25rem; font-weight: 500; }
+        .title-text h2 { font-size: 0.875rem; font-weight: 400; color: var(--md-on-surface-secondary); }
+
+        /* Main Content */
+        main {
+            padding: calc(var(--spacing-unit) * 2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Authenticator Grid */
+        .authenticator-grid {
+            display: grid;
+            /* Responsive grid: min 280px width, max 1fr */
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: calc(var(--spacing-unit) * 2); /* 16px */
+            width: 100%;
+            max-width: 1200px;
+            margin: calc(var(--spacing-unit) * 2) auto;
+        }
+
+        /* Authenticator Item Card */
+        .authenticator-item {
+            background-color: var(--md-surface-color);
+            border-radius: var(--md-border-radius);
+            box-shadow: var(--md-elevation-1);
+            display: flex;
+            flex-direction: column;
+            align-items: stretch; /* Stretch children */
+            text-align: center;
+            overflow: hidden;
+            transition: box-shadow 0.3s ease, background-color 0.2s ease;
+            padding: calc(var(--spacing-unit) * 2); /* 16px */
+            cursor: pointer; /* Make whole card clickable */
+             position: relative; /* Needed for potential feedback overlay */
+        }
+        .authenticator-item:hover { box-shadow: var(--md-elevation-2); }
+        .authenticator-item.copied-feedback {
+            background-color: #e8f5e9; /* Light green feedback */
+        }
+
+        .authenticator-item h3 {
+            font-size: 1rem;
+            font-weight: 500;
+            margin: 0 0 var(--spacing-unit) 0;
+            color: var(--md-on-surface-primary);
+            word-wrap: break-word;
+            text-align: left; /* Align name left */
+        }
+
+        .otp-display {
+            font-size: 2.4em;
+            font-weight: bold;
+            color: var(--md-primary-color);
+            letter-spacing: 4px;
+            margin: var(--spacing-unit) 0 calc(var(--spacing-unit) * 2) 0; /* Increased bottom margin */
+            font-family: monospace;
+            text-align: center; /* Center OTP */
+        }
+
+        /* Timer and Progress Area */
+        .timer-progress-area {
+            display: flex;
+            align-items: center;
+            gap: calc(var(--spacing-unit) * 1.5); /* 12px gap */
+            width: 100%;
+            margin-top: auto; /* Push to bottom if card grows */
+        }
+
+        .timer {
+            font-size: 0.85em;
+            color: var(--md-on-surface-secondary);
+            white-space: nowrap; /* Prevent wrapping */
+            flex-shrink: 0; /* Don't shrink timer text */
+        }
+
+        .progress-bar-container {
+            flex-grow: 1; /* Take remaining space */
+            height: var(--progress-bar-height);
+            background-color: #e0e0e0; /* Light grey track */
+            border-radius: calc(var(--progress-bar-height) / 2);
+            overflow: hidden;
+             position: relative; /* For potential future additions */
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%; /* Start empty */
+            background-color: var(--md-secondary-color); /* Green progress */
+            border-radius: calc(var(--progress-bar-height) / 2);
+            transition: width 1s linear; /* Smooth transition */
+             display: block;
+        }
+
+        /* Custom Key Section */
+        .custom-key-section {
+            background-color: var(--md-surface-color);
+            border-radius: var(--md-border-radius);
+            box-shadow: var(--md-elevation-1);
+            padding: calc(var(--spacing-unit) * 2);
+            margin-top: calc(var(--spacing-unit) * 3); /* Space above */
+            width: 100%;
+            max-width: 600px; /* Limit width */
+            display: flex;
+            flex-direction: column;
+            gap: calc(var(--spacing-unit) * 2);
+        }
+
+        .custom-key-section h2 {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin: 0 0 calc(var(--spacing-unit) * 0.5) 0;
+            text-align: left;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column; /* Stack label and input */
+            gap: calc(var(--spacing-unit) * 0.5);
+        }
+
+        .input-group label {
+            font-size: 0.8rem;
+            color: var(--md-on-surface-secondary);
+            text-align: left;
+             font-weight: 500;
+        }
+
+        .input-group input[type="text"] {
+            padding: calc(var(--spacing-unit) * 1.25) var(--spacing-unit); /* 10px 8px */
+            font-size: 1rem;
+            color: var(--md-on-surface-primary);
+            background-color: var(--md-background-color); /* Slightly different background */
+            border: 1px solid rgba(0,0,0,0.12);
+            border-radius: var(--md-border-radius);
+            transition: border-color 0.3s ease;
+            width: 100%; /* Take full width */
+        }
+        .input-group input[type="text"]:focus {
+            outline: none;
+            border-color: var(--md-primary-color);
+        }
+
+        #customOtpDisplayArea {
+            margin-top: var(--spacing-unit);
+            padding: calc(var(--spacing-unit) * 1.5); /* Slightly less padding */
+            border: 1px dashed rgba(0,0,0,0.12); /* Dashed border to indicate it's dynamic */
+            border-radius: var(--md-border-radius);
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+         #customOtpDisplayArea.copied-feedback {
+            background-color: #e8f5e9; /* Light green feedback */
+        }
+
+         /* Style for when custom area is inactive/has error */
+        #customOtpDisplayArea.inactive {
+             text-align: center;
+             color: var(--md-on-surface-secondary);
+             font-style: italic;
+             padding: calc(var(--spacing-unit) * 3) var(--spacing-unit); /* More padding when inactive */
+             cursor: default;
+        }
+
+        #customOtpDisplayArea:not(.inactive) .otp-display {
+             font-size: 2.0em; /* Slightly smaller custom OTP */
+             margin-bottom: calc(var(--spacing-unit) * 1.5);
+        }
+
+        /* Utility */
+        .hidden { display: none !important; }
+
+    </style>
+</head>
+
+<body>
+    <header class="app-header">
+        <div class="title-container">
+            <svg class="title-image" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="var(--md-primary-color)" width="40px" height="40px"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+            <div class="title-text">
+                <h1>Authenticator</h1>
+                <h2>OTP Code Generator</h2>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Authenticator Grid -->
+        <section id="authenticatorGrid" class="authenticator-grid">
+             <!-- Pre-configured Authenticator items will be added here -->
+        </section>
+
+        <!-- Custom Key Section -->
+        <section class="custom-key-section">
+            <h2>Generate Custom OTP</h2>
+            <div class="input-group">
+                <label for="customSecretInput">Enter Base32 Secret Key:</label>
+                <input type="text" id="customSecretInput" placeholder="e.g., JBSWY3DPEHPK3PXP">
+            </div>
+            <!-- Area to display the custom OTP -->
+            <div id="customOtpDisplayArea" class="inactive">
+                Enter a key above to generate OTP
+                <!-- Content will be dynamically added here -->
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- Configuration ---
+        const accounts = [
+            { name: "Test Key 1", secret: 'sjxc2tb27nvahqv6qyz3dxynsvivsch7' },
+            { name: "Test Key 2", secret: 'YPVWCA4I7OLKV6TE' }
+            // Add more pre-configured accounts here if needed
+        ];
+        const totpPeriod = 30;
+        const totpDigits = 6;
+        const base32Regex = /^[A-Z2-7]+=*$/i; // Case-insensitive Base32 check
+
+        // --- State ---
+        let customSecret = null; // Holds the currently active custom secret
+        let customOtpIntervalId = null; // To manage potential separate interval if needed (though integrated below)
+
+        // --- DOM References ---
+        const authenticatorGrid = document.getElementById('authenticatorGrid');
+        const customSecretInput = document.getElementById('customSecretInput');
+        const customOtpDisplayArea = document.getElementById('customOtpDisplayArea');
+
+        // --- TOTP Generation Logic (Unchanged) ---
+        function base32Decode(base32) {
+            const base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+            let bits = ""; let value = 0;
+            base32 = base32.toUpperCase().replace(/=+$/, '').replace(/\s/g,''); // Remove spaces too
+            if (!base32Regex.test(base32)) throw new Error("Invalid Base32 characters");
+            for (let i = 0; i < base32.length; i++) {
+                value = base32chars.indexOf(base32.charAt(i));
+                if (value === -1) throw new Error(`Invalid Base32 character: ${base32.charAt(i)}`);
+                bits += value.toString(2).padStart(5, '0');
+            }
+            const bytes = new Uint8Array(Math.floor(bits.length / 8));
+            for (let i = 0; i < bytes.length; i++) {
+                bytes[i] = parseInt(bits.substr(i * 8, 8), 2);
+            }
+            // Basic validation: TOTP keys are typically at least 10 bytes (80 bits)
+            if (bytes.length < 8) console.warn("Warning: Secret key is unusually short.");
+            return bytes;
+        }
+        function numberToBuffer(num) { /* ... (same as before) ... */
+            const buffer = new ArrayBuffer(8); const view = new DataView(buffer);
+            const high = Math.floor(num / Math.pow(2, 32)); const low = num % Math.pow(2, 32);
+            view.setUint32(0, high, false); view.setUint32(4, low, false); return buffer;
+        }
+        async function generateTOTP(secretBase32, period = 30, digits = 6) { /* ... (same as before, includes try/catch) ... */
+             try {
+                const keyBytes = base32Decode(secretBase32);
+                if (keyBytes.length === 0) throw new Error("Decoded key is empty");
+                const timeStep = Math.floor(Date.now() / 1000 / period);
+                const timeBuffer = numberToBuffer(timeStep);
+                const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+                const hmacResult = await crypto.subtle.sign('HMAC', cryptoKey, timeBuffer);
+                const hmacBytes = new Uint8Array(hmacResult); const offset = hmacBytes[hmacBytes.length - 1] & 0x0f;
+                const truncatedHash = ((hmacBytes[offset] & 0x7f) << 24) | (hmacBytes[offset + 1] << 16) | (hmacBytes[offset + 2] << 8) | hmacBytes[offset + 3];
+                const otp = (truncatedHash % Math.pow(10, digits)).toString();
+                return otp.padStart(digits, '0');
+            } catch (error) {
+                console.error(`Error generating TOTP for key ending in ...${secretBase32.slice(-4)}:`, error.message);
+                // Return specific error messages based on caught error type if desired
+                if (error.message.includes("Base32")) return "Invalid Key";
+                return "Error";
+            }
+        }
+
+        // --- UI Update & Interaction ---
+
+        // Function to copy OTP and provide feedback
+        function copyOTP(otpValue, elementToFeedback) {
+            if (otpValue && otpValue !== "------" && !otpValue.includes("Error") && !otpValue.includes("Key") && otpValue !== "......") {
+                navigator.clipboard.writeText(otpValue.replace(/\s/g, '')) // Remove spaces
+                    .then(() => {
+                        elementToFeedback.classList.add('copied-feedback');
+                        setTimeout(() => {
+                            elementToFeedback.classList.remove('copied-feedback');
+                        }, 600); // Shorter feedback duration
+                    })
+                    .catch(err => console.error('Failed to copy OTP: ', err));
+            } else {
+                console.warn("Attempted to copy invalid OTP value:", otpValue);
+                 // Maybe add subtle visual feedback for failure? (e.g., quick red flash)
+            }
+        }
+
+        // Create HTML structure for a single authenticator item (pre-configured or custom)
+        function createAuthenticatorItemHTML(idPrefix, name) {
+            return `
+                ${name ? `<h3>${escapeHTML(name)}</h3>` : ''} <!-- Conditionally show name -->
+                <div class="otp-display" id="${idPrefix}-otp">------</div>
+                <div class="timer-progress-area">
+                    <div class="timer" id="${idPrefix}-timer">--s</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="${idPrefix}-progress"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Sanitize HTML content
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+
+        // Function to update OTP, timer, and progress bar for a given element set
+        async function updateSingleDisplay(idPrefix, secret) {
+            const otpElement = document.getElementById(`${idPrefix}-otp`);
+            const timerElement = document.getElementById(`${idPrefix}-timer`);
+            const progressElement = document.getElementById(`${idPrefix}-progress`);
+
+            if (!otpElement || !timerElement || !progressElement) return; // Elements not found
+
+            const currentTime = Math.floor(Date.now() / 1000);
+            const secondsRemaining = totpPeriod - (currentTime % totpPeriod);
+            const progressPercent = (secondsRemaining / totpPeriod) * 100;
+
+            // Update timer and progress bar
+            timerElement.textContent = `${secondsRemaining}s`;
+            progressElement.style.width = `${progressPercent}%`;
+            // Reset progress smoothly at the start of a new cycle
+            if (secondsRemaining === totpPeriod) {
+                 progressElement.style.transition = 'none'; // Disable transition for instant reset
+                 progressElement.style.width = '100%';
+                 // Force reflow/repaint before re-enabling transition
+                 void progressElement.offsetWidth;
+                 progressElement.style.transition = 'width 1s linear';
+            } else {
+                 progressElement.style.transition = 'width 1s linear'; // Ensure transition is active
+            }
+
+
+            // Regenerate OTP only when needed
+            const currentOtp = otpElement.textContent;
+            const needsUpdate = secondsRemaining === totpPeriod || currentOtp === "------" || currentOtp.includes("Error") || currentOtp.includes("Key") || currentOtp === "......";
+
+            if (needsUpdate) {
+                otpElement.textContent = "......"; // Loading indicator
+                const otp = await generateTOTP(secret, totpPeriod, totpDigits);
+                // Check if the element still exists before updating (important for custom key changes)
+                 if (document.getElementById(`${idPrefix}-otp`)) {
+                     otpElement.textContent = otp.includes("Error") || otp.includes("Key") ? otp : otp.replace(/(\d{3})(?=\d)/g, '$1 '); // Add space
+                 }
+            }
+        }
+
+        // Main update loop for all active displays
+        function updateAllDisplays() {
+            // Update pre-configured accounts
+            accounts.forEach((account, index) => {
+                updateSingleDisplay(`acc-${index}`, account.secret);
+            });
+
+            // Update custom account if active
+            if (customSecret) {
+                 updateSingleDisplay('custom', customSecret);
+            }
+        }
+
+        // --- Event Listener for Custom Key Input ---
+        customSecretInput.addEventListener('input', () => {
+            const newSecret = customSecretInput.value.trim();
+
+            if (!newSecret) {
+                // Input cleared, deactivate custom display
+                customSecret = null;
+                customOtpDisplayArea.innerHTML = 'Enter a key above to generate OTP';
+                customOtpDisplayArea.className = 'inactive'; // Reset styling
+                customOtpDisplayArea.onclick = null; // Remove click listener
+                return; // Stop further processing
+            }
+
+             // Basic validation before attempting generation
+             if (!base32Regex.test(newSecret.replace(/\s/g,''))) {
+                 customSecret = null; // Invalidate current secret if format is wrong
+                 customOtpDisplayArea.innerHTML = '<div class="otp-display" style="color: red; font-size: 1em;">Invalid Base32 Format</div>';
+                 customOtpDisplayArea.className = ''; // Make it visible but show error
+                 customOtpDisplayArea.onclick = null;
+                 return;
+             }
+
+
+            // Secret changed or entered
+            customSecret = newSecret; // Update the active secret
+            // Set up the display area if it's not already, or if it was inactive/error
+            if (customOtpDisplayArea.classList.contains('inactive') || !document.getElementById('custom-otp')) {
+                 customOtpDisplayArea.innerHTML = createAuthenticatorItemHTML('custom', null); // No explicit name for custom
+                 customOtpDisplayArea.className = ''; // Make active
+                 // Add click listener for copying
+                 customOtpDisplayArea.onclick = () => {
+                     const otpElem = document.getElementById('custom-otp');
+                     if (otpElem) copyOTP(otpElem.textContent, customOtpDisplayArea);
+                 };
+            }
+
+             // Immediately update the display for the new/changed key
+             updateSingleDisplay('custom', customSecret);
+        });
+
+
+        // --- Initial Setup ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Create pre-configured authenticator items
+            accounts.forEach((account, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'authenticator-item';
+                itemDiv.id = `item-acc-${index}`; // ID for the item itself
+                itemDiv.innerHTML = createAuthenticatorItemHTML(`acc-${index}`, account.name);
+                // Add click listener to the item div for copying
+                itemDiv.onclick = () => {
+                     const otpElem = document.getElementById(`acc-${index}-otp`);
+                     if (otpElem) copyOTP(otpElem.textContent, itemDiv);
+                };
+                authenticatorGrid.appendChild(itemDiv);
+            });
+
+            // Initial call and start the interval timer
+            updateAllDisplays();
+            setInterval(updateAllDisplays, 1000);
+        });
+
+    </script>
+</body>
+
+</html>
